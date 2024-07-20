@@ -35,7 +35,7 @@
         ws.onmessage = function(event) {
             const message = JSON.parse(event.data);
             const contentDiv = document.getElementById('content');
-            contentDiv.innerHTML = ''; // Clear existing content
+            contentDiv.innerHTML = '';
 
             switch (message.type) {
                 case 'audio':
