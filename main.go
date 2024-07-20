@@ -15,9 +15,8 @@ import (
 )
 
 var (
-	lastEvent       command.Event
-	isUnsupportedOS = false
-	wsClients       = make(map[*websocket.Conn]bool)
+	lastEvent command.Event
+	wsClients = make(map[*websocket.Conn]bool)
 )
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -51,17 +50,12 @@ func connectMQTT() mqtt.Client {
 }
 
 func main() {
-	if os.Getenv("OS_TYPE") == "unsupported" {
-		isUnsupportedOS = true
-	}
-
 	if _, err := os.Stat(os.Getenv("ASSETS_FOLDER")); os.IsNotExist(err) {
 		os.Mkdir(os.Getenv("ASSETS_FOLDER"), os.ModePerm)
 	}
 	mqttClient := connectMQTT()
 
-	topic := "hotest"
-	if token := mqttClient.Subscribe(topic, 1, nil); token.Wait() && token.Error() != nil {
+	if token := mqttClient.Subscribe(os.Getenv("MQTT_TOPIC"), 1, nil); token.Wait() && token.Error() != nil {
 		logrus.Fatalf("Error subscribing to topic: %v", token.Error())
 	}
 
@@ -81,7 +75,6 @@ func main() {
 		if err != nil {
 			return err
 		}
-
 		urls := make([]string, len(files))
 		for i, file := range files {
 			urls[i] = filepath.Join(os.Getenv("ASSETS_FOLDER"), filepath.Base(file))

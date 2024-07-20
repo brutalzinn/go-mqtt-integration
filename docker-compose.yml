@@ -1,7 +1,6 @@
 services:
   go-app:
     build: .
-    container_name: go_app_container
     volumes:
       - .:/app
     ports:
