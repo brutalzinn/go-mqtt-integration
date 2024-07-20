@@ -1,0 +1,17 @@
+Title: Integration of Alexa Device, Home Assistant, MQTT, and Go Application
+
+Alexa Device -> Home Assistant: Trigger routine (e.g., Notify Go App to Take a Break)
+Home Assistant -> MQTT Broker: Publish event (e.g., {"type":"notify","data":{"title":"Reminder","message":"Take a break!"}})
+MQTT Broker -> Go Application: Forward event
+
+Go Application -> Go Application: Process event
+alt Event Type: Notify
+    Go Application -> Go Application: Unmarshal data
+    Go Application -> Operating System: Display notification
+else Event Type: Command
+    Go Application -> Operating System: Execute command
+else Event Type: Audio
+    Go Application -> Go Application: Download and play audio
+else Event Type: YouTube
+    Go Application -> Go Application: Download and play YouTube video or audio
+end

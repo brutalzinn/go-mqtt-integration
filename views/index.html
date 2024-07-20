@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HO INTEGRATION WITH ALEXA AND GO USING MQTT TEST # 2</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        .container {
+            margin: 20px;
+        }
+        .content {
+            margin-top: 20px;
+        }
+        audio, video {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HO INTEGRATION WITH ALEXA AND GO USING MQTT TEST # 2</h1>
+        <div id="content" class="content"></div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+        ws.onmessage = function(event) {
+            const message = JSON.parse(event.data);
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = ''; // Clear existing content
+
+            switch (message.type) {
+                case 'audio':
+                case 'youtube':
+                    const url = message.data;
+                    const extension = url.split('.').pop();
+                    if (['mp3', 'wav'].includes(extension)) {
+                        const audio = document.createElement('audio');
+                        audio.controls = true;
+                        audio.src = url;
+                        contentDiv.appendChild(audio);
+                    } else if (['mp4', 'webm'].includes(extension)) {
+                        const video = document.createElement('video');
+                        video.controls = true;
+                        video.src = url;
+                        contentDiv.appendChild(video);
+                    }
+                    break;
+                case 'notify':
+                    const notify = message.data;
+                    const notifyDiv = document.createElement('div');
+                    notifyDiv.innerHTML = `<h2>${notify.title}</h2><p>${notify.message}</p>`;
+                    contentDiv.appendChild(notifyDiv);
+                    break;
+                case 'command':
+                    console.log(`Command received: ${message.data}`);
+                    break;
+                default:
+                    console.log(`Unknown event type: ${message.type}`);
+            }
+        };
+
+        ws.onopen = function() {
+            console.log('WebSocket connection established');
+        };
+
+        ws.onclose = function() {
+            console.log('WebSocket connection closed');
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error')
+        }
+
+</script>

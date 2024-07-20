@@ -1,0 +1,10 @@
+services:
+  go-app:
+    build: .
+    container_name: go_app_container
+    volumes:
+      - .:/app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
