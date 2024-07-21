@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/brutalzinn/go-mqtt-integration/command"
+	"github.com/brutalzinn/go-mqtt-integration/wshelper"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
@@ -16,17 +16,16 @@ import (
 
 var (
 	lastEvent command.Event
-	wsClients = make(map[*websocket.Conn]bool)
 )
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	var event *command.Event
-	logrus.Info("command received")
 	err := json.Unmarshal(msg.Payload(), &event)
 	if err != nil {
 		logrus.Error("Error unmarshaling MQTT message: %s", err)
 		return
 	}
+	logrus.Info("command received")
 	lastEvent = *event
 	err = command.Run(event, msg.Payload())
 	if err != nil {
@@ -34,7 +33,7 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 	}
 }
 
-func connectMQTT() mqtt.Client {
+func startMQTTClient() mqtt.Client {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(os.Getenv("MQTT_BROKER"))
 	opts.SetClientID(os.Getenv("MQTT_ID_CLIENT"))
@@ -44,19 +43,22 @@ func connectMQTT() mqtt.Client {
 
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		logrus.Fatal("Error connecting to MQTT broker: %v", token.Error())
+		logrus.Fatal("Error connecting to MQTT broker: %s", token.Error())
 	}
+	if token := client.Subscribe(os.Getenv("MQTT_TOPIC"), 1, nil); token.Wait() && token.Error() != nil {
+		logrus.Fatalf("Error subscribing to topic: %v", token.Error())
+	}
+
+	logrus.Info("MQTT CONNECTED")
 	return client
 }
 
 func main() {
-	if _, err := os.Stat(os.Getenv("ASSETS_FOLDER")); os.IsNotExist(err) {
-		os.Mkdir(os.Getenv("ASSETS_FOLDER"), os.ModePerm)
-	}
-	mqttClient := connectMQTT()
-
-	if token := mqttClient.Subscribe(os.Getenv("MQTT_TOPIC"), 1, nil); token.Wait() && token.Error() != nil {
-		logrus.Fatalf("Error subscribing to topic: %v", token.Error())
+	assetsFolder := os.Getenv("ASSETS_FOLDER")
+	logrus.Info("Starting GO MQTT INTEGRATION")
+	if _, err := os.Stat(assetsFolder); os.IsNotExist(err) {
+		os.Mkdir(assetsFolder, os.ModePerm)
+		logrus.Info("Dir for assets is created at %s", assetsFolder)
 	}
 
 	engine := html.New("./views", ".html")
@@ -71,35 +73,22 @@ func main() {
 	})
 
 	app.Get("/content-url", func(c *fiber.Ctx) error {
-		files, err := filepath.Glob(filepath.Join(os.Getenv("ASSETS_FOLDER"), "*"))
+		files, err := filepath.Glob(filepath.Join(assetsFolder, "*"))
 		if err != nil {
+			logrus.Error("WebSocket error:", err)
 			return err
 		}
 		urls := make([]string, len(files))
 		for i, file := range files {
-			urls[i] = filepath.Join(os.Getenv("ASSETS_FOLDER"), filepath.Base(file))
+			urls[i] = filepath.Join(assetsFolder, filepath.Base(file))
 		}
 		return c.JSON(urls)
 	})
 
-	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
-		wsClients[c] = true
-		defer func() {
-			delete(wsClients, c)
-			c.Close()
-		}()
+	app.Get("/ws", websocket.New(wshelper.WebSocketHandler))
+	app.Static("/assets", filepath.Join(assetsFolder))
 
-		for {
-			_, _, err := c.ReadMessage()
-			if err != nil {
-				log.Println("WebSocket error:", err)
-				return
-			}
-		}
-	}))
-
-	///we need it?
-	app.Static("/assets", "./assets")
+	go startMQTTClient()
 
 	logrus.Fatal(app.Listen(":3000"))
 }
