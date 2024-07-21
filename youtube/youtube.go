@@ -1,16 +1,17 @@
 package youtube
 
 import (
-	"io"
-	"os"
 	"strings"
 
+	"github.com/brutalzinn/go-mqtt-integration/confighelper"
+	"github.com/brutalzinn/go-mqtt-integration/filemanager"
 	"github.com/kkdai/youtube/v2"
 
 	"github.com/sirupsen/logrus"
 )
 
 // /thanks to @kkdai github.com/kkdai/youtube to provide this awesome lib ><
+
 func GetBestHighFormat(formats []youtube.Format) youtube.Format {
 	var bestFormat youtube.Format
 	for _, format := range formats {
@@ -31,33 +32,34 @@ func FilterFormats(formats youtube.FormatList, kind string) []youtube.Format {
 	return filteredFormats
 }
 
-func DownloadStream(client *youtube.Client, video *youtube.Video, format *youtube.Format, filepath string) {
+func DownloadStream(client *youtube.Client, video *youtube.Video, format *youtube.Format, filename string) error {
 	stream, _, err := client.GetStream(video, format)
 	if err != nil {
-		logrus.Error(err)
+		return nil
 	}
 	defer stream.Close()
-
-	file, err := os.Create(filepath)
+	config := confighelper.Get()
+	fm := filemanager.New(filename)
+	fm.SetReader(stream)
+	fm.SetAWS(filemanager.AWS{
+		Region: config.AWS.Region,
+		Bucket: config.AWS.Bucket,
+	})
+	err = fm.Save()
 	if err != nil {
-		logrus.Error(err)
+		return err
 	}
-	defer file.Close()
-
-	_, err = io.Copy(file, stream)
-	if err != nil {
-		logrus.Error(err)
-	}
+	return nil
 }
 
-func DownloadAudio(client *youtube.Client, video *youtube.Video, path string) {
+func DownloadAudio(client *youtube.Client, video *youtube.Video, path string) error {
 	formats_highest_a := GetBestHighFormat(FilterFormats(video.Formats, "audio"))
-	DownloadStream(client, video, &formats_highest_a, path)
+	return DownloadStream(client, video, &formats_highest_a, path)
 }
 
-func DownloadVideo(client *youtube.Client, video *youtube.Video, path string) {
+func DownloadVideo(client *youtube.Client, video *youtube.Video, path string) error {
 	formats_highest_v := GetBestHighFormat(FilterFormats(video.Formats, "video"))
-	DownloadStream(client, video, &formats_highest_v, path)
+	return DownloadStream(client, video, &formats_highest_v, path)
 }
 
 func GetClient(url string) (*youtube.Client, *youtube.Video, error) {

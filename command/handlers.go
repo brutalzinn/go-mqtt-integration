@@ -28,9 +28,17 @@ func handleYouTubeCommand(data Youtube) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if data.Download {
 			if data.OnlyAudio {
-				youtube.DownloadAudio(client, video, path)
+				err := youtube.DownloadAudio(client, video, path)
+				if err != nil {
+					logrus.Error("Error on downloing YouTube audio: %w %w\n", data.Src, err.Error())
+					return err
+				}
 			} else {
-				youtube.DownloadVideo(client, video, path)
+				err := youtube.DownloadVideo(client, video, path)
+				if err != nil {
+					logrus.Error("Error on downloing YouTube audio: %w %w", data.Src, err.Error())
+					return err
+				}
 			}
 		}
 	}
@@ -84,13 +92,13 @@ func playYoutubeCommand(filePath string, onlyAudio bool) error {
 
 	switch runtime.GOOS {
 	case "darwin":
-		if onlyAudio {
-			exec.Command("afplay", filePath).Start()
-		} else {
-			exec.Command("open", filePath).Start()
-		}
+		// if onlyAudio {
+		// 	exec.Command("afplay", filePath).Start()
+		// } else {
+		// 	exec.Command("open", filePath).Start()
+		// }
 	case "windows":
-		exec.Command("cmd", "/c", "start", filePath).Start()
+		// exec.Command("cmd", "/c", "start", filePath).Start()
 	default:
 		logrus.Println("Unsupported OS for playing content")
 		notifyData := map[string]any{
@@ -104,10 +112,10 @@ func playYoutubeCommand(filePath string, onlyAudio bool) error {
 
 func playAudioCommand(url string) error {
 	switch runtime.GOOS {
-	case "darwin":
-		exec.Command("afplay", url).Start()
-	case "windows":
-		exec.Command("cmd", "/c", "start", url).Start()
+	// case "darwin":
+	// 	exec.Command("afplay", url).Start()
+	// case "windows":
+	// 	exec.Command("cmd", "/c", "start", url).Start()
 	default:
 		notifyData := map[string]any{
 			"src": fmt.Sprintf("/%v", url),

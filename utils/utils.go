@@ -5,11 +5,12 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"path"
 	"strings"
+
+	"github.com/brutalzinn/go-mqtt-integration/confighelper"
+	"github.com/brutalzinn/go-mqtt-integration/filemanager"
 )
 
 func GetMD5Hash(text string) string {
@@ -23,20 +24,17 @@ func SanitizeFileName(filename string) string {
 	filePath = strings.Replace(filePath, "..", "_", -1)
 	filePath = strings.Replace(filePath, " ", "", -1)
 	filePath = strings.Replace(filePath, "-", "", -1)
-
 	filePath = path.Clean(filePath)
 	// Remove illegal characters for paths, flattening accents
 	// and replacing some common separators with -
 	b := bytes.NewBufferString("")
 	for _, c := range filePath {
-		// Check transliterations first
 		if val, ok := transliterations[c]; ok {
 			b.WriteString(val)
 		} else {
 			b.WriteRune(c)
 		}
 	}
-	// NB this may be of length 0, caller must check
 	return filePath
 }
 
@@ -49,14 +47,13 @@ func DownloadAudio(url string, filename string) error {
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download audio: received non-200 status code %d", response.StatusCode)
 	}
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-	_, err = io.Copy(file, response.Body)
-	if err != nil {
-		return fmt.Errorf("failed to save audio to file: %w", err)
-	}
+	config := confighelper.Get()
+	fm := filemanager.New(filename)
+	fm.SetReader(response.Body)
+	fm.SetAWS(filemanager.AWS{
+		Region: config.AWS.Region,
+		Bucket: config.AWS.Bucket,
+	})
+	fm.Save()
 	return nil
 }
