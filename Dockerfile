@@ -2,12 +2,6 @@ FROM golang:latest
 
 WORKDIR /app
 
-COPY . .
-
-RUN go mod download
-
-RUN go build -o go-schedule-manager .
-
 RUN echo 'deb https://deb.debian.org/debian stable non-free contrib' >> /etc/apt/sources.list
 
 RUN apt-get update && \
@@ -21,6 +15,14 @@ RUN apt-get update && \
     yt-dlp \
     make
 
-ENTRYPOINT ["./main"]
 
-EXPOSE 8000
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN go build -o /main .
+
+EXPOSE 3000
+
+ENTRYPOINT ["/main"]

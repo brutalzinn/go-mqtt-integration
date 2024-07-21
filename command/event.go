@@ -18,7 +18,20 @@ type Notify struct {
 }
 
 type Command struct {
-	Command string `json:"command"`
+	OS struct {
+		Windows struct {
+			Name string `json:"name"`
+			Args string `json:"args"`
+		} `json:"windows"`
+		Mac struct {
+			Name string `json:"name"`
+			Args string `json:"args"`
+		} `json:"mac"`
+		Linux struct {
+			Name string `json:"name"`
+			Args string `json:"args"`
+		} `json:"linux"`
+	}
 }
 
 type Youtube struct {

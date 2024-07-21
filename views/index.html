@@ -31,7 +31,9 @@
     </div>
 
     <script>
-
+      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
         const ws = new WebSocket(`ws://${window.location.host}/ws`);
         ws.onmessage = function(event) {
             const message = JSON.parse(event.data);
@@ -94,9 +96,7 @@
             }
         }
 
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-            Notification.requestPermission();
-        }
+  
 
         function userInteract() {
             alert("YEEP. Now we are in agree with browser resctrictions to play medias");

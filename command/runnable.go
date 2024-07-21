@@ -29,8 +29,8 @@ func Run(event *Event, msg []byte) error {
 		if err != nil {
 			return err
 		}
-		logrus.Printf("Executing command: %s\n", command.Command)
-		return handleCommand(command.Command)
+		logrus.Printf("Executing command: ")
+		return handleCommand(command)
 	case "youtube":
 		var youtube Youtube
 		err := json.Unmarshal(event.Data, &youtube)

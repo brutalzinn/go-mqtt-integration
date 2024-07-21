@@ -1,7 +1,6 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,8 +12,6 @@ import (
 	"github.com/brutalzinn/go-mqtt-integration/youtube"
 	"github.com/sirupsen/logrus"
 )
-
-var isCompatiblePlayback = os.Getenv("OS_TYPE") == "unsupported"
 
 func handleYouTubeCommand(data Youtube) error {
 	client, video, err := youtube.GetClient(data.Src)
@@ -47,36 +44,31 @@ func handleYouTubeCommand(data Youtube) error {
 }
 
 func handleNotificationCommand(title string, message string) error {
-	if isCompatiblePlayback {
-		notifyData := map[string]any{
-			"title":   title,
-			"message": message,
-		}
-		///incorrect way. But now i can identify that i am using this project as hyperfocus too. why my mind do this?!!
-		wshelper.NotifyClients("notify", notifyData)
-		return errors.New("is this app running at container? can only reproduce on web")
-	}
+
 	switch runtime.GOOS {
 	case "darwin":
 		exec.Command("osascript", "-e", `display notification "`+message+`"`).Run()
 	case "windows":
 		exec.Command("powershell", "-Command", `New-BurntToastNotification -Text "`+message+`"`).Run()
 	default:
-		return errors.New("Unsupported OS for notifications")
+		notifyData := map[string]any{
+			"title":   title,
+			"message": message,
+		}
+		wshelper.NotifyClients("notify", notifyData)
 	}
 	return nil
 }
 
-func handleCommand(command string) error {
+func handleCommand(command Command) error {
 	switch runtime.GOOS {
 	case "darwin":
-		exec.Command("sh", "-c", command).Run()
+		return exec.Command(command.OS.Mac.Name, command.OS.Mac.Args).Run()
 	case "windows":
-		exec.Command("cmd", "/c", command).Run()
+		return exec.Command(command.OS.Windows.Name, command.OS.Windows.Args).Run()
 	default:
-		return errors.New("Unsupported OS for command execution")
+		return exec.Command(command.OS.Linux.Name, command.OS.Linux.Args).Run()
 	}
-	return nil
 }
 
 func handleAudioCommand(audio Audio) error {
@@ -89,15 +81,7 @@ func handleAudioCommand(audio Audio) error {
 }
 
 func playYoutubeCommand(filePath string, onlyAudio bool) error {
-	if isCompatiblePlayback {
-		notifyData := map[string]any{
-			"src":       fmt.Sprintf("/%v", filePath),
-			"onlyAudio": onlyAudio,
-		}
-		///incorrect way. But now i can identify that i am using this project as hyperfocus too. why my mind do this?!!
-		wshelper.NotifyClients("youtube", notifyData)
-		return errors.New("is this app running at container? can only reproduce on web")
-	}
+
 	switch runtime.GOOS {
 	case "darwin":
 		if onlyAudio {
@@ -109,27 +93,26 @@ func playYoutubeCommand(filePath string, onlyAudio bool) error {
 		exec.Command("cmd", "/c", "start", filePath).Start()
 	default:
 		logrus.Println("Unsupported OS for playing content")
-		return errors.New("unsupported OS for playing content")
+		notifyData := map[string]any{
+			"src":       fmt.Sprintf("/%v", filePath),
+			"onlyAudio": onlyAudio,
+		}
+		wshelper.NotifyClients("youtube", notifyData)
 	}
 	return nil
 }
 
 func playAudioCommand(url string) error {
-	if isCompatiblePlayback {
-		notifyData := map[string]any{
-			"src": fmt.Sprintf("/%v", url),
-		}
-		///incorrect way. But now i can identify that i am using this project as hyperfocus too. why my mind do this?!!
-		wshelper.NotifyClients("audio", notifyData)
-		return errors.New("is this app running at container? can only reproduce on web")
-	}
 	switch runtime.GOOS {
 	case "darwin":
 		exec.Command("afplay", url).Start()
 	case "windows":
 		exec.Command("cmd", "/c", "start", url).Start()
 	default:
-		return errors.New("Unsupported OS for playing audio")
+		notifyData := map[string]any{
+			"src": fmt.Sprintf("/%v", url),
+		}
+		wshelper.NotifyClients("audio", notifyData)
 	}
 	return nil
 }
