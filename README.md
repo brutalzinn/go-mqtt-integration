@@ -5,6 +5,10 @@
 This project done for get me warnings about my week. Lets suppose you has a Alexa and a Home Assistant OS running in your home.
 And Alexa and HO cant help me to remember me some diaries task that comes with a "adult" reponsabilities. This is a simple task manager way to integrate Alexa, HO and notify me when i am working or developing something. This working at Windows ( not test to Mac OSX yet but sometime i will do this )
 
+### DISCLAIMER 2:
+
+Why you created many go modules with helper as sufix. Are you OK? YES, DUDE. these helpers method will be moved for single core module after.
+
 ### Why this? 
 
 This project done for get me warnings about my week. Lets suppose you has a Alexa and a Home Assistant OS running in your home.
