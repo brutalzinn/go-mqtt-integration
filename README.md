@@ -12,14 +12,14 @@ I really dont know but this keeps my mind in "secure mode" to do some crazy thin
 
 A nice diagram made by chatgpt to help me to explain this project to my friends and why i quit my league of legends party to do this. ( SORRY )
 
-# Installation 
+# How to setup 
 
-
+```sh
 $ git clone github.com/brutalzinn/go-mqtt-integration
 $ cd go-mqtt-integration
 $ docker build -t go-mqtt-integration .
 $ docker run -p 3000:3000 go-mqtt-integration
-
+```
 
 
 ![diagram to explain this project](" nice diagram by chat gpt ")
