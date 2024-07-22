@@ -45,7 +45,7 @@ func DownloadStream(client *youtube.Client, video *youtube.Video, format *youtub
 		Region: config.AWS.Region,
 		Bucket: config.AWS.Bucket,
 	})
-	err = fm.Save()
+	err = fm.Write()
 	if err != nil {
 		return err
 	}

@@ -1,10 +1,10 @@
 package filemanager
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/brutalzinn/go-mqtt-integration/awshelper"
 )
@@ -50,12 +50,13 @@ func (fm *FileManager) SetAWS(awsConfig AWS) {
 	fm.IsAWS = true
 }
 
-func (fm *FileManager) Load() ([]byte, error) {
+// /TODO: finish the implementation of the Open, Write and Delete methods
+func (fm *FileManager) Open() ([]byte, error) {
 	if fm.IsAWS {
-		data, err := awshelper.S3GetObject(context.TODO(), fm.AWS.Region, fm.AWS.Bucket, fm.File.Name)
+		data, err := awshelper.S3GetObject(fm.AWS.Region, fm.AWS.Bucket, fm.File.Name)
 		return data, err
 	}
-	file, err := os.Open(fm.File.Name)
+	file, err := os.Open(filepath.Join(fm.File.Name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
@@ -67,9 +68,9 @@ func (fm *FileManager) Load() ([]byte, error) {
 	return data, nil
 }
 
-func (fm *FileManager) Save() error {
+func (fm *FileManager) Write() error {
 	if fm.IsAWS {
-		return awshelper.S3PutObject(context.TODO(), fm.AWS.Region, fm.AWS.Bucket, fm.File.Name, fm.File.Data)
+		return awshelper.S3PutObject(fm.AWS.Region, fm.AWS.Bucket, fm.File.Name, fm.File.Data)
 	}
 	file, err := os.Create(fm.File.Name)
 	if err != nil {
@@ -78,4 +79,11 @@ func (fm *FileManager) Save() error {
 	defer file.Close()
 	file.Write(fm.File.Data)
 	return nil
+}
+
+func (fm *FileManager) Delete() error {
+	if fm.IsAWS {
+		return awshelper.S3DeleteObject(fm.AWS.Region, fm.AWS.Bucket, fm.File.Name)
+	}
+	return os.Remove(fm.File.Name)
 }

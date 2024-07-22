@@ -9,11 +9,11 @@ import (
 
 // maybe a manifest with yaml can facility us life.
 type Config struct {
-	StartAt time.Time
-	Assets  string
-	AWS     AWSConfig
-	MQTT    MQTTConfig
-	OS      OSConfig
+	StartAt      time.Time
+	AssetsFolder string
+	AWS          AWSConfig
+	MQTT         MQTTConfig
+	OS           OSConfig
 }
 
 type AWSConfig struct {
@@ -45,7 +45,7 @@ func Get() Config {
 func New() Config {
 	logrus.Info("Preparing config")
 	config = Config{
-		Assets: os.Getenv("ASSETS_FOLDER"),
+		AssetsFolder: os.Getenv("ASSETS_FOLDER"),
 		MQTT: MQTTConfig{
 			Broker:   os.Getenv("MQTT_BROKER"),
 			Topic:    os.Getenv("MQTT_TOPIC"),

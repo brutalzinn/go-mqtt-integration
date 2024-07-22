@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/brutalzinn/go-mqtt-integration/confighelper"
 	"github.com/brutalzinn/go-mqtt-integration/utils"
 	"github.com/brutalzinn/go-mqtt-integration/wshelper"
 	"github.com/brutalzinn/go-mqtt-integration/youtube"
@@ -19,22 +20,23 @@ func handleYouTubeCommand(data Youtube) error {
 		return err
 	}
 	title := utils.SanitizeFileName(video.Title)
-	var path string
+	var fileName string
 	if data.OnlyAudio {
-		path = os.Getenv("ASSETS_FOLDER") + "/" + title + ".flc"
+		fileName = title + ".flac"
 	} else {
-		path = os.Getenv("ASSETS_FOLDER") + "/" + title + ".mp4"
+		fileName = title + ".mp4"
 	}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	///transfer this verification to filemanager. Filemanager will handle local files, aws files and Ftp files too. Why three providers? Because i need audio backups
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		if data.Download {
 			if data.OnlyAudio {
-				err := youtube.DownloadAudio(client, video, path)
+				err := youtube.DownloadAudio(client, video, fileName)
 				if err != nil {
 					logrus.Error("Error on downloing YouTube audio: %w %w\n", data.Src, err.Error())
 					return err
 				}
 			} else {
-				err := youtube.DownloadVideo(client, video, path)
+				err := youtube.DownloadVideo(client, video, fileName)
 				if err != nil {
 					logrus.Error("Error on downloing YouTube audio: %w %w", data.Src, err.Error())
 					return err
@@ -42,7 +44,6 @@ func handleYouTubeCommand(data Youtube) error {
 			}
 		}
 	}
-
 	err = playYoutubeCommand(path, data.OnlyAudio)
 	if err != nil {
 		logrus.Printf("Playing YouTube video: %s\n", data.Src)
@@ -80,7 +81,8 @@ func handleCommand(command Command) error {
 }
 
 func handleAudioCommand(audio Audio) error {
-	path := filepath.Join(os.Getenv("ASSETS_FOLDER"), audio.Name)
+	config := confighelper.Get()
+	path := filepath.Join(config.AssetsFolder, audio.Name)
 	err := utils.DownloadAudio(audio.Src, audio.Name)
 	if err != nil {
 		return err
@@ -89,16 +91,15 @@ func handleAudioCommand(audio Audio) error {
 }
 
 func playYoutubeCommand(filePath string, onlyAudio bool) error {
-
 	switch runtime.GOOS {
 	case "darwin":
-		// if onlyAudio {
-		// 	exec.Command("afplay", filePath).Start()
-		// } else {
-		// 	exec.Command("open", filePath).Start()
-		// }
+		if onlyAudio {
+			exec.Command("afplay", filePath).Start()
+		} else {
+			exec.Command("open", filePath).Start()
+		}
 	case "windows":
-		// exec.Command("cmd", "/c", "start", filePath).Start()
+		exec.Command("cmd", "/c", "start", filePath).Start()
 	default:
 		logrus.Println("Unsupported OS for playing content")
 		notifyData := map[string]any{
@@ -112,10 +113,10 @@ func playYoutubeCommand(filePath string, onlyAudio bool) error {
 
 func playAudioCommand(url string) error {
 	switch runtime.GOOS {
-	// case "darwin":
-	// 	exec.Command("afplay", url).Start()
-	// case "windows":
-	// 	exec.Command("cmd", "/c", "start", url).Start()
+	case "darwin":
+		exec.Command("afplay", url).Start()
+	case "windows":
+		exec.Command("cmd", "/c", "start", url).Start()
 	default:
 		notifyData := map[string]any{
 			"src": fmt.Sprintf("/%v", url),

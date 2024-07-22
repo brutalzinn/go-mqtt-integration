@@ -54,6 +54,6 @@ func DownloadAudio(url string, filename string) error {
 		Region: config.AWS.Region,
 		Bucket: config.AWS.Bucket,
 	})
-	fm.Save()
+	fm.Write()
 	return nil
 }
