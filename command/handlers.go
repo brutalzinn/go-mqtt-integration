@@ -2,12 +2,12 @@ package command
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 
 	"github.com/brutalzinn/go-mqtt-integration/confighelper"
+	"github.com/brutalzinn/go-mqtt-integration/filemanager"
 	"github.com/brutalzinn/go-mqtt-integration/utils"
 	"github.com/brutalzinn/go-mqtt-integration/wshelper"
 	"github.com/brutalzinn/go-mqtt-integration/youtube"
@@ -19,34 +19,60 @@ func handleYouTubeCommand(data Youtube) error {
 	if err != nil {
 		return err
 	}
-	title := utils.SanitizeFileName(video.Title)
-	var fileName string
+	var filename string
 	if data.OnlyAudio {
-		fileName = title + ".flac"
+		filename = video.ID + ".mp3"
 	} else {
-		fileName = title + ".mp4"
+		filename = video.ID + ".mp4"
 	}
-	///transfer this verification to filemanager. Filemanager will handle local files, aws files and Ftp files too. Why three providers? Because i need audio backups
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		if data.Download {
-			if data.OnlyAudio {
-				err := youtube.DownloadAudio(client, video, fileName)
-				if err != nil {
-					logrus.Error("Error on downloing YouTube audio: %w %w\n", data.Src, err.Error())
-					return err
-				}
-			} else {
-				err := youtube.DownloadVideo(client, video, fileName)
-				if err != nil {
-					logrus.Error("Error on downloing YouTube audio: %w %w", data.Src, err.Error())
-					return err
-				}
+	// if _, err := os.Stat(filename); os.IsNotExist(err) {
+	if data.Download {
+		if data.OnlyAudio {
+			///if this will be played at Alexa..
+			///amazon recommends to use mp3 with 48k bitrate and 24khz sample rate
+			filesBytes, err := youtube.DownloadAudio(client, video, filename)
+			if err != nil {
+				return err
+			}
+			///convert to 48k bitrate and 24khz sample rate
+			convertedBytes, err := utils.ConvertMP3ForAlexa(filesBytes)
+			if err != nil {
+				return err
+			}
+			config := confighelper.Get()
+			fm := filemanager.New(filename)
+			fm.SetBytes(convertedBytes)
+			fm.SetAWS(&filemanager.AWS{
+				Enabled: config.AWS.Enabled,
+				Bucket:  config.AWS.Bucket,
+				Region:  config.AWS.Region,
+			})
+			err = fm.Write()
+			if err != nil {
+				return err
+			}
+		} else {
+			filesBytes, err := youtube.DownloadVideo(client, video, filename)
+			if err != nil {
+				return err
+			}
+			config := confighelper.Get()
+			fm := filemanager.New(filename)
+			fm.SetBytes(filesBytes)
+			fm.SetAWS(&filemanager.AWS{
+				Enabled: config.AWS.Enabled,
+				Bucket:  config.AWS.Bucket,
+				Region:  config.AWS.Region,
+			})
+			err = fm.Write()
+			if err != nil {
+				return err
 			}
 		}
 	}
-	err = playYoutubeCommand(path, data.OnlyAudio)
+	// }
+	err = playYoutubeCommand(filename, data.OnlyAudio)
 	if err != nil {
-		logrus.Printf("Playing YouTube video: %s\n", data.Src)
 		return err
 	}
 	return nil

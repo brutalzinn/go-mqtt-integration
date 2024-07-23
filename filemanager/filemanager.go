@@ -10,25 +10,30 @@ import (
 )
 
 type FileManager struct {
-	IsAWS bool
-	File  File
-	AWS   AWS
+	File File
+	AWS  AWS
 }
 
 type File struct {
 	Name string
+	Dir  string
 	Data []byte
 }
 type AWS struct {
-	Region string
-	Bucket string
+	Region  string
+	Bucket  string
+	Enabled bool
 }
 
 func New(name string) *FileManager {
 	fm := &FileManager{
-		IsAWS: false,
+		File: File{
+			Name: name,
+		},
+		AWS: AWS{
+			Enabled: false,
+		},
 	}
-	fm.File.Name = name
 	return fm
 }
 
@@ -45,18 +50,17 @@ func (fm *FileManager) SetReader(r io.Reader) error {
 	return nil
 }
 
-func (fm *FileManager) SetAWS(awsConfig AWS) {
-	fm.AWS = awsConfig
-	fm.IsAWS = true
+func (fm *FileManager) SetAWS(aws *AWS) {
+	fm.AWS = *aws
 }
 
 // /TODO: finish the implementation of the Open, Write and Delete methods
 func (fm *FileManager) Open() ([]byte, error) {
-	if fm.IsAWS {
+	if fm.AWS.Enabled {
 		data, err := awshelper.S3GetObject(fm.AWS.Region, fm.AWS.Bucket, fm.File.Name)
 		return data, err
 	}
-	file, err := os.Open(filepath.Join(fm.File.Name))
+	file, err := os.Open(filepath.Join(fm.File.Dir, fm.File.Name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
@@ -69,10 +73,10 @@ func (fm *FileManager) Open() ([]byte, error) {
 }
 
 func (fm *FileManager) Write() error {
-	if fm.IsAWS {
+	if fm.AWS.Enabled {
 		return awshelper.S3PutObject(fm.AWS.Region, fm.AWS.Bucket, fm.File.Name, fm.File.Data)
 	}
-	file, err := os.Create(fm.File.Name)
+	file, err := os.Create(filepath.Join(fm.File.Dir, fm.File.Name))
 	if err != nil {
 		return err
 	}
@@ -82,8 +86,8 @@ func (fm *FileManager) Write() error {
 }
 
 func (fm *FileManager) Delete() error {
-	if fm.IsAWS {
+	if fm.AWS.Enabled {
 		return awshelper.S3DeleteObject(fm.AWS.Region, fm.AWS.Bucket, fm.File.Name)
 	}
-	return os.Remove(fm.File.Name)
+	return os.Remove(filepath.Join(fm.File.Dir, fm.File.Name))
 }

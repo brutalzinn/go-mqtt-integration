@@ -14,7 +14,7 @@ func NotifyClients(eventType string, data any) {
 			"data": data,
 		}
 		err := client.WriteJSON(msg)
-		logrus.Info("Send %s notify by ws to %s", msg, client.LocalAddr())
+		logrus.Info("Send %w notify by ws to %w", msg, client.LocalAddr())
 		if err != nil {
 			logrus.Error("WebSocket error:", err)
 			client.Close()

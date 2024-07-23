@@ -22,7 +22,7 @@ func main() {
 	}
 	//// Check if AWS is enabled
 	//// yeep. I know. I should have used a flag
-	if config.AWS.IsAWS == false {
+	if config.AWS.Enabled == false {
 		logrus.Warn("AWS is not enabled. Files is stored locally and cannot be accessed from the HO and Alexa devices.")
 	}
 	engine := html.New("./views", ".html")
@@ -36,7 +36,7 @@ func main() {
 			"Assets":    "/assets",
 			"WS":        "/ws",
 			"Content":   "/content-url",
-			"AWS":       config.AWS.IsAWS,
+			"AWS":       config.AWS.Enabled,
 			"StartTime": config.StartAt.Format("01/02/2006 15:04:05"),
 		})
 	})

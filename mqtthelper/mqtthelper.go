@@ -14,13 +14,13 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 	var event *command.Event
 	err := json.Unmarshal(msg.Payload(), &event)
 	if err != nil {
-		logrus.Errorln("Error unmarshaling MQTT message: %v", err)
+		logrus.Errorln("Error unmarshaling MQTT message: %w", err.Error())
 		return
 	}
 	logrus.Info("command received")
 	err = command.Run(event, msg.Payload())
 	if err != nil {
-		logrus.Errorln("Error unmarshaling MQTT message: %v", err)
+		logrus.Errorln("Error unmarshaling MQTT message: %w", err.Error())
 	}
 }
 

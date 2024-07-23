@@ -1,10 +1,9 @@
 package youtube
 
 import (
+	"io"
 	"strings"
 
-	"github.com/brutalzinn/go-mqtt-integration/confighelper"
-	"github.com/brutalzinn/go-mqtt-integration/filemanager"
 	"github.com/kkdai/youtube/v2"
 
 	"github.com/sirupsen/logrus"
@@ -32,32 +31,25 @@ func FilterFormats(formats youtube.FormatList, kind string) []youtube.Format {
 	return filteredFormats
 }
 
-func DownloadStream(client *youtube.Client, video *youtube.Video, format *youtube.Format, filename string) error {
+func DownloadStream(client *youtube.Client, video *youtube.Video, format *youtube.Format, filename string) ([]byte, error) {
 	stream, _, err := client.GetStream(video, format)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer stream.Close()
-	config := confighelper.Get()
-	fm := filemanager.New(filename)
-	fm.SetReader(stream)
-	fm.SetAWS(filemanager.AWS{
-		Region: config.AWS.Region,
-		Bucket: config.AWS.Bucket,
-	})
-	err = fm.Write()
+	fileBytes, err := io.ReadAll(stream)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return fileBytes, nil
 }
 
-func DownloadAudio(client *youtube.Client, video *youtube.Video, path string) error {
+func DownloadAudio(client *youtube.Client, video *youtube.Video, path string) ([]byte, error) {
 	formats_highest_a := GetBestHighFormat(FilterFormats(video.Formats, "audio"))
 	return DownloadStream(client, video, &formats_highest_a, path)
 }
 
-func DownloadVideo(client *youtube.Client, video *youtube.Video, path string) error {
+func DownloadVideo(client *youtube.Client, video *youtube.Video, path string) ([]byte, error) {
 	formats_highest_v := GetBestHighFormat(FilterFormats(video.Formats, "video"))
 	return DownloadStream(client, video, &formats_highest_v, path)
 }

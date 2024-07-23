@@ -22,7 +22,7 @@ type AWSConfig struct {
 	EndPoint  string
 	AccessKey string
 	SecretKey string
-	IsAWS     bool
+	Enabled   bool
 }
 
 type MQTTConfig struct {
@@ -59,7 +59,7 @@ func New() Config {
 			EndPoint:  os.Getenv("AWS_ENDPOINT"),
 			AccessKey: os.Getenv("AWS_ACCESS_KEY"),
 			SecretKey: os.Getenv("AWS_SECRET_KEY"),
-			IsAWS:     os.Getenv("AWS_ENABLED") == "true",
+			Enabled:   os.Getenv("AWS_ENABLED") == "true",
 		},
 	}
 	logrus.Info("Config is ready")

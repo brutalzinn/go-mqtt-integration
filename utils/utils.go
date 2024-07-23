@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
 	"path"
 	"strings"
 
@@ -38,6 +40,39 @@ func SanitizeFileName(filename string) string {
 	return filePath
 }
 
+// /amazon recommends to use mp3 with 48k bitrate and 24khz sample rate
+func ConvertMP3ForAlexa(input []byte) ([]byte, error) {
+	inputFile, err := os.CreateTemp("", "input-*.mp3")
+	if err != nil {
+		return nil, err
+	}
+	defer inputFile.Close()
+	defer os.Remove(inputFile.Name())
+	_, err = inputFile.Write(input)
+	if err != nil {
+		return nil, err
+	}
+	outputFile, err := os.CreateTemp("", "output-*.mp3")
+	if err != nil {
+		return nil, err
+	}
+	defer outputFile.Close()
+	defer os.Remove(outputFile.Name())
+	cmd := exec.Command("ffmpeg", "-y", "-i", inputFile.Name(), "-ac", "2", "-codec:a", "libmp3lame", "-b:a", "48k", "-ar", "16000", outputFile.Name())
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	err = cmd.Run()
+	if err != nil {
+		return nil, fmt.Errorf("ffmpeg error: %v, output: %s", err, out.String())
+	}
+	convertedBytes, err := os.ReadFile(outputFile.Name())
+	if err != nil {
+		return nil, err
+	}
+	return convertedBytes, nil
+}
+
 func DownloadAudio(url string, filename string) error {
 	response, err := http.Get(url)
 	if err != nil {
@@ -50,10 +85,14 @@ func DownloadAudio(url string, filename string) error {
 	config := confighelper.Get()
 	fm := filemanager.New(filename)
 	fm.SetReader(response.Body)
-	fm.SetAWS(filemanager.AWS{
-		Region: config.AWS.Region,
-		Bucket: config.AWS.Bucket,
+	fm.SetAWS(&filemanager.AWS{
+		Enabled: config.AWS.Enabled,
+		Bucket:  config.AWS.Bucket,
+		Region:  config.AWS.Region,
 	})
-	fm.Write()
+	err = fm.Write()
+	if err != nil {
+		return err
+	}
 	return nil
 }
